@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flask App</title>
+    <title>Admin Dashboard</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
@@ -11,8 +11,14 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
 </head>
 <body>
-    <h1>sPark</h1>
-    <a href="{{ url_for('login') }}" class="btn btn-dark" >Login</a>
-    <a href="{{ url_for('register') }}" class="btn btn-dark" >Register</a>
+    <h1>Admin Dashboard</h1>
+    <a href="{{ url_for('logout') }}" class="btn btn-dark" >Logout</a>
+    <a href="{{ url_for('home') }}" class="btn btn-dark" >Home</a>
+
+    <p><b>Username: </b> {{user.username}} </p>
+    <p><b>Email: </b> {{user.email}} </p>
+
+    <a href="{{ url_for('create_admin') }}" class="btn btn-dark" >Create Admin</a>
+    <a href="{{ url_for('reset') }}" class="btn btn-dark">Reset DB</a>
 </body>
 </html>
