@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy 
 import bcrypt
+from flask_login import login_required
 
 
 app = Flask(__name__)
@@ -28,8 +29,17 @@ class User(db.Model):
     def check_password(self, password):
         return bcrypt.checkpw(password.encode('utf-8'), self.password.encode('utf-8'))
 
-with app.app_context():
-    db.create_all()
+class Balance(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    balance = db.Column(db.Integer, nullable=False, default=0)
+
+    def __init__(self, username, balance):
+        self.username = username
+        self.balance = balance
+
+    def add_amount(self, amount):
+        self.balance += amount
 
 
 @app.route('/create_admin', methods=['GET', 'POST'])
@@ -44,7 +54,10 @@ def create_admin():
         db.session.add(admin)
         db.session.commit()
 
-        return "<script>alert('Admin created!');</script>"
+        if session['is_admin']:
+            return "<script>alert('Admin created!'); window.location.href = '/admin';</script>"
+        return "<script>alert('Admin created!'); window.location.href = '/login';</script>"
+
     return render_template('create_admin.html')
 
 @app.route('/admin', methods=['GET', 'POST'])
@@ -55,11 +68,48 @@ def admin():
     return render_template('login.html', error='You are not a admin!')
 
 
+
+@app.route('/check_balance', methods=['GET', 'POST'])
+def check_balance():
+    if session['is_admin']:
+        if request.method == 'POST':
+            username = request.form['username']
+            balance = Balance.query.filter_by(username=username).first()
+            return render_template('check_balance.html', balance=balance)
+        return render_template('check_balance.html')
+    return "You are not an admin!"
+
+
+
+@app.route('/add_balance', methods=['GET', 'POST'])
+def add_balance():
+    if session['is_admin']:
+        if request.method == 'POST':
+            username = request.form['username']
+            amount = request.form['amount']
+            # amount to int
+            amount = int(amount)
+
+            balance = Balance.query.filter_by(username=username).first()
+            balance.balance += amount
+
+            db.session.commit()
+            return "<script>alert('Balance added!'); window.location.href = '/admin';</script>"
+        
+        return render_template('add_balance.html')
+    return "You are not an admin!"
+
+
+
+
 @app.route('/reset')
 def reset():
-    db.drop_all()
-    db.create_all()
-    return 'Database reset'
+    # if session['is_admin']:
+        db.drop_all()
+        db.create_all()
+        return "<script>alert('Database reset!'); window.location.href = '/';</script>"
+    # return 'You are not an admin!'
+
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -70,9 +120,11 @@ def home():
 
 @app.route('/logout')
 def logout():
-    session.pop('username', None)
-    session.pop('email', None)
-    session.pop('is_admin', None)
+    if session['username']:
+        session.pop('username', None)
+        session.pop('email', None)
+        session.pop('is_admin', None)
+        return redirect(url_for('login'))
     return redirect(url_for('login'))
 
 
@@ -124,8 +176,11 @@ def register():
 def dashboard():
     if session['username']:
         user = User.query.filter_by(username=session['username']).first()
-        return render_template('dashboard.html', user=user, email=session['email']) 
+        amount = Balance.query.filter_by(username=session['username']).first()
+        return render_template('dashboard.html', user=user, email=session['email'], amount=amount)
     return render_template('login.html', error='You are not logged in')
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)

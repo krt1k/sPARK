@@ -17,6 +17,11 @@
 
     <p><b>Username: </b> {{user.username}} </p>
     <p><b>Email: </b> {{user.email}} </p>
+    {% if amount.balance %}
+    <p><b>Balance: </b> {{amount.balance}} </p>
+    {% else %}
+    <p><b>Balance: </b> 0 </p>
+    {% endif %}
 
 </body>
 </html>

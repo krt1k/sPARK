@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Add balance</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <h2>Add balance</h2>
+  <form action="{{ url_for('add_balance') }}" method="POST">
+    <div class="form-group">
+        <label for="username">Username:</label>
+        {% if username %}
+        <input type="text" class="form-control" id="username" readonly placeholder="Enter username" name="username" value="{{username}}">
+        {% else %}
+        <input type="text" class="form-control" id="username" placeholder="Enter username" name="username">
+        {% endif %}
+    </div>
+
+    {% if balance %}
+    <p><b>Current Balance: </b> {{balance}} </p>
+    {% else %}
+    <p><b>Current Balance: </b> 0 </p>
+    {% endif %}
+
+    <div class="form-group">
+      <label for="amount">Amount to be added:</label>
+      <input type="number" class="form-control" id="amount" placeholder="Enter amount" name="amount">
+  </div>
+    
+  <button type="submit" class="btn btn-dark">Add balance</button>
+  
+  <a href="{{ url_for('dashboard') }}" class="btn btn-dark">Dashboard</a>
+</form>
+</div>
+
+</body>
+</html>
