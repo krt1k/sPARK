@@ -11,6 +11,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db = SQLAlchemy(app)
 app.config['SECRET_KEY'] = 'ToPsecret'
+one_hr_rate = 30
 
 
 class User(db.Model):
@@ -31,6 +32,7 @@ class User(db.Model):
 
     def check_password(self, password):
         return bcrypt.checkpw(password.encode('utf-8'), self.password.encode('utf-8'))
+    
 
 class Balance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -43,30 +45,34 @@ class Balance(db.Model):
 
     def add_amount(self, amount):
         self.balance += amount
+    
+    def detect_amount(self, amount):
+        self.balance = self.balance - amount
+        return self.balance
 
 class EntryLogs(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     time = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     # entry or exit
-    transact = db.Column(db.Boolean, nullable=False)
+    transact = db.Column(db.Boolean, nullable=False, default=True)
     
     def __init__(self, username, transact):
         self.username = username
-        self.time = datetime.datetime.utcnow
+        self.time = datetime.datetime.utcnow()
         self.transact = transact
         
 
-@app.route('/transact/<string:transact>')
-def entry(transact):
+@app.route('/transact/<string:type>')
+def entry(type):
     if session['username']:
         # trans = EntryLogs.query.filter_by(username=session['username']).first()
-        if transact == "entry":
+        if type == "entry":
             entry = EntryLogs(session['username'], True)
             db.session.add(entry)
             db.session.commit()
             return "<script>alert('Entry logged!'); window.location.href = '/dashboard';</script>"
-        elif transact == "exit":
+        elif type == "exit":
             exit = EntryLogs(session['username'], False)
             db.session.add(exit)
             db.session.commit()
@@ -75,37 +81,77 @@ def entry(transact):
     return render_template('login.html', error='You are not logged in')
 
 # TODO: Add amount logs
-# class AmountLogs(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     username = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-#     time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-#     amount = db.Column(db.Integer, nullable=False)
+class AmountLogs(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    time = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow())
+    amount = db.Column(db.Integer, nullable=False)
+    remaining_balance = db.Column(db.Integer, nullable=False)
+
+    def __init__(self, username, amount, remaining_balance):
+        self.username = username
+        self.time = datetime.datetime.utcnow()
+        self.amount = amount
+        self.remaining_balance = remaining_balance
     
-#     def detect(self, amount):
-#         user = User.query.filter_by(username=self.username).first()
-#         user.balance = user.balance - amount
-#         db.session.add(self, amount)
-#         db.session.commit()
+
+def calculate_balance():
+    last_user_entry = EntryLogs.query.filter_by(username=session['username']).where(EntryLogs.transact == True).order_by(EntryLogs.time.desc()).first()
+    last_user_exit = EntryLogs.query.filter_by(username=session['username']).where(EntryLogs.transact == False).order_by(EntryLogs.time.desc()).first()
+
+    print(f"user: {session['username']}, entry: {last_user_entry}, exit: {last_user_exit}")
+    
+    if last_user_entry and last_user_exit:
+        time_diff = last_user_exit.time - last_user_entry.time
+        amount = time_diff.seconds * (1/3600) * one_hr_rate
+        # minimum amount is 10
+        amount = int(round(amount, 0))
+
+        if amount < 10:
+            amount = 10
+
+        balance = Balance.query.filter_by(username=session['username']).first()
+        rem_bal = balance.detect_amount(amount)
+        db.session.commit()
+
+        amt_log = AmountLogs(username=session['username'], amount=amount, remaining_balance=rem_bal)
+        db.session.add(amt_log)
+        db.session.commit()
+
+        return amount, time_diff.seconds
+
+
+@app.route('/detect', methods=['GET', 'POST'])
+def detect():
+
+    if session.get('username'):
+
+        entry("exit")
+        amount = calculate_balance()
+        if amount:
+            return f"<script>alert('Amount: {amount[0]} detected for {amount[1]} seconds!'); window.location.href = '/dashboard';</script>"
+    
+    return render_template('login.html', error='You are not logged in')
 
 @app.route('/list_entry_logs')
 def list_entry_logs():
     logs = EntryLogs.query.all()
     # serialize the data
-    logs = list(map(lambda log: {'username': log.username, 'time': log.time, 'transact': log.transact}, logs))
+    logs = list(map(lambda log: {'username': log.username, 'time': log.time, 'type': log.transact}, logs))
     return logs
 
 @app.route('/list_users')
 def list_users(): 
-    users = User.query.all()
+    users = User.query.where(User.is_admin == False).all()
     # serialize the data
-    users = list(map(lambda user: {'username': user.username, 'email': user.email, 'is_admin': user.is_admin}, users))
+    # users = list(map(lambda user: {'username': user.username, 'email': user.email, 'is_admin': user.is_admin}, users))
     return users
 
 @app.route('/list_balances')
 def list_balances():
     balances = Balance.query.all()
     # serialize the data
-    balances = list(map(lambda balance: {'username': balance.username, 'balance': balance.balance}, balances))
+    # balances = list(map(lambda balance: {'username': balance.username, 'balance': balance.balance}, balances))
     return balances
 
 # @event.listens_for(User, 'after_insert')
@@ -128,9 +174,11 @@ def create_admin():
         db.session.add(admin)
         db.session.commit()
 
-        if session['is_admin']:
+        if not session['is_admin']:
+            return "<script>alert('Admin created!'); window.location.href = '/login';</script>"
+        elif session['is_admin']:
             return "<script>alert('Admin created!'); window.location.href = '/admin';</script>"
-        return "<script>alert('Admin created!'); window.location.href = '/login';</script>"
+        
 
     return render_template('create_admin.html')
 
@@ -146,11 +194,13 @@ def admin():
 @app.route('/check_balance', methods=['GET', 'POST'])
 def check_balance():
     if session['is_admin']:
+        balances_list = list_balances()
+        
         if request.method == 'POST':
             username = request.form['username']
             balance = Balance.query.filter_by(username=username).first()
-            return render_template('check_balance.html', balance=balance)
-        return render_template('check_balance.html')
+            return render_template('check_balance.html', balance=balance.balance, balances=balances_list)
+        return render_template('check_balance.html', balances=balances_list)
     return "You are not an admin!"
 
 
@@ -158,6 +208,8 @@ def check_balance():
 @app.route('/add_balance', methods=['GET', 'POST'])
 def add_balance():
     if session['is_admin']:
+        balances_list = list_balances()
+
         if request.method == 'POST':
             username = request.form['username']
             amount = request.form['amount']
@@ -172,7 +224,7 @@ def add_balance():
             db.session.commit()
             return "<script>alert('Balance added!'); window.location.href = '/admin';</script>"
         
-        return render_template('add_balance.html')
+        return render_template('add_balance.html', balances=balances_list)
     return "You are not an admin!"
 
 
@@ -257,7 +309,8 @@ def dashboard():
     if session['username']:
         user = User.query.filter_by(username=session['username']).first()
         amount = Balance.query.filter_by(username=session['username']).first()
-        return render_template('dashboard.html', user=user, email=session['email'], amount=amount)
+        logs = AmountLogs.query.filter_by(username=session['username']).order_by(AmountLogs.time.desc()).all()
+        return render_template('dashboard.html', user=user, email=session['email'], amount=amount, logs=logs)
     return render_template('login.html', error='You are not logged in')
 
 if __name__ == '__main__':

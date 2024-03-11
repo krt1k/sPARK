@@ -12,26 +12,62 @@
 
 <div class="container">
   <h2>Check balance</h2>
+
+  {% if not balance %}
   <form action="{{ url_for('check_balance') }}" method="POST">
+    
+  {% else %}
+
+  <form action="{{ url_for('add_balance') }}" method="POST">
+  {% endif %}
     <div class="form-group">
         <label for="username">Username:</label>
         <input type="text" class="form-control" id="username" placeholder="Enter username" name="username">
     </div>
 
-    {% if not balance %}
     <button type="submit" class="btn btn-dark">Check balance</button>
-    {% endif %}
     
     {% if balance %}
-    <p><b>Balance: </b> {{balance}} </p>
-    <a href="{{ url_for('add_balance', username=username, balance=balance) }}" class="btn btn-dark">Add balance</a>
+    <br><p><b>Balance: </b> {{balance}} </p><br>
+      <div class="form-group">
+        <label for="amount">Amount to be added:</label>
+        <input type="number" class="form-control" id="amount" placeholder="Enter amount" name="amount">
+    </div>
+      
+    <button type="submit" class="btn btn-dark">Add balance</button>
+    
+    <a href="{{ url_for('admin') }}" class="btn btn-dark" >Admin Dashboard</a>
+    <!-- <a href="{{ url_for('dashboard') }}" class="btn btn-dark">Dashboard</a> -->
+  </form>
     {% endif %}
 
-    <!-- SEND THE BALANCE TO add_balance.html -->
-    <a href="{{ url_for('admin') }}" class="btn btn-dark" >Admin Dashboard</a>
-  <!-- <a href="{{ url_for('dashboard') }}" class="btn btn-dark">Dashboard</a> -->
-
   </form>
+
+  <!-- # users list with their balances-->
+
+
+
+  <h3>Users:</h3>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bal in balances %}
+            <tr>
+                <td>{{bal.id}}</td>
+                <td>{{bal.username}}</td>
+                <td>{{bal.balance}}</td>
+
+            </tr>
+            {% endfor %}
+        </tbody>
+
 </div>
 
 </body>

@@ -23,5 +23,27 @@
     <p><b>Balance: </b> 0 </p>
     {% endif %}
 
+    <h3>Logs:</h3>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Transaction ID</th>
+                <th>Deducted Amount</th>
+                <th>Balance Amount</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{log.id}}</td>
+                <td>{{log.amount}}</td>
+                <td>{{log.remaining_balance}}</td>
+                <td>{{log.time}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
 </body>
 </html>
