@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entry Page</title>  <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  </head>
+  <body>
+  
+  <div class="container">
+    <h2>Entry Page</h2>
+    <p>This is the entry page for the sPARK web application.</p>
+    {% if slot_avail %}
+    <h4>Goto slot:</h4>
+    <h3>{{slot}}</h3>
+    {% else %}
+    <h3>No slots available</h3>
+    {% endif %}
+
+    <a href="{{ url_for('home') }}" class="btn btn-info" role="button">Home</a>
+  </div>
+</body>
+</html>

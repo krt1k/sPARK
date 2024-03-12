@@ -1,6 +1,6 @@
-import datetime
+floors = ['A', 'B', 'C']
+count = [i for i in range(1, 11)]
 
-while True:
-    # print(round(float(input("Enter a number: ")), 0))
-    # round to the nearest 5
-    print(round(int(input("Enter a number: ")), -1))
+for floor in floors:
+    for i in count:
+        print(f"{floor}{i}")

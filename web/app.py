@@ -61,7 +61,63 @@ class EntryLogs(db.Model):
         self.username = username
         self.time = datetime.datetime.utcnow()
         self.transact = transact
-        
+
+
+# parking slot availability
+# slot number A1-A10, B1-B10, C1-C10
+# slot status: True or False
+class ParkingSlots(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    # slot_number = db.Column(db.String(10), nullable=False)
+    slot_number = db.Column(db.String(10), nullable=False)
+    status = db.Column(db.Boolean, nullable=False, default='True')
+    username = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    def __init__(self, slot_number):
+        self.slot_number = slot_number
+        self.status = True
+    
+    def get_status(self):
+        return self.status
+    
+    def change_status(self, status):
+        self.status = status
+        if not status:
+            self.username = session['username']
+        else:
+            self.username = None
+        return self.status
+
+@app.route('/slot_init')
+def slot_init():
+    # user = User('testing', 'testing@gmail.com', 'testing')
+    # db.session.add(user)
+    # db.session.commit()
+    floors = ['A', 'B', 'C']
+    count = [i for i in range(1, 11)]
+
+    for floor in floors:
+        for i in count:
+            slot = ParkingSlots(f"{floor}{i}")
+            db.session.add(slot)
+            db.session.commit()
+            db.session.close()
+    return slot_finder()
+
+@app.route('/slot_finder')
+def slot_finder():
+    slots = ParkingSlots.query.where(ParkingSlots.status == True).order_by(ParkingSlots.id.asc()).all()
+
+    for slot in slots:
+        return slot.slot_number
+    
+    return "No slots available"
+
+@app.route('/list_slot')
+def list_slots():
+    slots = ParkingSlots.query.all()
+    slots = list(map(lambda slot: {'slot_number': slot.slot_number, 'status': slot.status, 'username': slot.username}, slots))
+    return slots
 
 @app.route('/transact/<string:type>')
 def entry(type):
@@ -71,11 +127,19 @@ def entry(type):
             entry = EntryLogs(session['username'], True)
             db.session.add(entry)
             db.session.commit()
-            return "<script>alert('Entry logged!'); window.location.href = '/dashboard';</script>"
+            slot_num = slot_finder()
+            if slot_num != "No slots available":
+                slot = ParkingSlots.query.filter_by(slot_number=slot_num).first()
+                slot.change_status(False)
+                db.session.commit()
+                return render_template('entry.html', slot=slot_num, slot_avail=True)
+            return redirect('entry.html', slot_avail=False)
         elif type == "exit":
             exit = EntryLogs(session['username'], False)
             db.session.add(exit)
             db.session.commit()
+            slot = ParkingSlots.query.filter_by(username=session['username']).first()
+            slot.change_status(True)
             return "<script>alert('Exit logged!'); window.location.href = '/dashboard';</script>"
 
     return render_template('login.html', error='You are not logged in')
@@ -142,16 +206,17 @@ def list_entry_logs():
 
 @app.route('/list_users')
 def list_users(): 
+    # users = User.query.all()
     users = User.query.where(User.is_admin == False).all()
     # serialize the data
-    # users = list(map(lambda user: {'username': user.username, 'email': user.email, 'is_admin': user.is_admin}, users))
+    users = list(map(lambda user: {'username': user.username, 'email': user.email, 'is_admin': user.is_admin}, users))
     return users
 
 @app.route('/list_balances')
 def list_balances():
     balances = Balance.query.all()
     # serialize the data
-    # balances = list(map(lambda balance: {'username': balance.username, 'balance': balance.balance}, balances))
+    balances = list(map(lambda balance: {'username': balance.username, 'balance': balance.balance}, balances))
     return balances
 
 # @event.listens_for(User, 'after_insert')
@@ -173,6 +238,10 @@ def create_admin():
         admin.is_admin = True
         db.session.add(admin)
         db.session.commit()
+        
+        session['username'] = admin.username
+        session['email'] = admin.email
+        session['is_admin'] = admin.is_admin
 
         if not session['is_admin']:
             return "<script>alert('Admin created!'); window.location.href = '/login';</script>"
@@ -222,12 +291,10 @@ def add_balance():
             balance.add_amount(amount)
 
             db.session.commit()
-            return "<script>alert('Balance added!'); window.location.href = '/admin';</script>"
+            return "<script>alert('Balance added!'); window.location.href = '/add_balance';</script>"
         
         return render_template('add_balance.html', balances=balances_list)
     return "You are not an admin!"
-
-
 
 
 @app.route('/reset')
@@ -238,12 +305,14 @@ def reset():
         return "<script>alert('Database reset!'); window.location.href = '/';</script>"
     # return 'You are not an admin!'
 
+with app.app_context():
+    db.create_all()
+    # slot_init()
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if not session.get('username'):
         return render_template('index.html')
-
     if session['username']:
         if session['is_admin']:
             return redirect(url_for('admin'))
@@ -316,4 +385,8 @@ def dashboard():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        # if slot is empty, initialize slots
+        if not ParkingSlots.query.first():
+            slot_init()
+
     app.run(debug=True)
