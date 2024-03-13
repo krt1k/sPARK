@@ -1,7 +1,10 @@
 import datetime
+import random
+import string
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 import bcrypt
+
 
 
 app = Flask(__name__)
@@ -13,6 +16,8 @@ db = SQLAlchemy(app)
 app.config['SECRET_KEY'] = 'ToPsecret'
 one_hr_rate = 30
 
+entry_count = 0
+exit_count = 0
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -119,11 +124,52 @@ def list_slots():
     slots = list(map(lambda slot: {'slot_number': slot.slot_number, 'status': slot.status, 'username': slot.username}, slots))
     return slots
 
-@app.route('/transact/<string:type>')
-def entry(type):
+current_entry_token = ""
+current_exit_token = ""
+
+
+def gen_token(type):
+    token = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+    global current_exit_token
+    global current_entry_token
+    global entry_count
+    global exit_count
+    if type == "entry":
+        # entry_count = 0
+        current_entry_token = token
+    elif type == "exit":
+        # exit_count = 0
+        current_exit_token = token
+
+@app.route('/transact/<string:type>/<string:token>')
+def entry(type, token):
+    #dynamic url with unique token
+    
+    global entry_count
+    global exit_count
+
     if session['username']:
         # trans = EntryLogs.query.filter_by(username=session['username']).first()
+
         if type == "entry":
+
+            if token != current_entry_token:
+                return "<script>alert('Token not valid!'); window.location.href = '/dashboard';</script>"
+            
+            # check if the last entry is an exit
+            last_entry = EntryLogs.query.filter_by(username=session['username']).order_by(EntryLogs.time.desc()).first()
+            if last_entry and last_entry.transact == True:
+                gen_token("entry")
+                entry_count = 0
+                return "<script>alert('You have not exited yet!'); window.location.href = '/dashboard';</script>"
+            
+            # check for minimum balance
+            balance = Balance.query.filter_by(username=session['username']).first()
+            if balance.balance < 30:
+                gen_token("entry")
+                entry_count = 0
+                return "<script>alert('Insufficient minimum balance!'); window.location.href = '/dashboard';</script>"
+
             entry = EntryLogs(session['username'], True)
             db.session.add(entry)
             db.session.commit()
@@ -132,17 +178,70 @@ def entry(type):
                 slot = ParkingSlots.query.filter_by(slot_number=slot_num).first()
                 slot.change_status(False)
                 db.session.commit()
+                gen_token("entry")
+                entry_count = 0
                 return render_template('entry.html', slot=slot_num, slot_avail=True)
+            
+            gen_token("entry")
+            entry_count = 0
             return redirect('entry.html', slot_avail=False)
+        
         elif type == "exit":
+
+            if token != current_exit_token:
+                return "<script>alert('Token not valid!'); window.location.href = '/dashboard';</script>"
+            
+            # check if the last entry is an entry
+            last_exit = EntryLogs.query.filter_by(username=session['username']).order_by(EntryLogs.time.desc()).first()
+            if last_exit and last_exit.transact == False:
+                gen_token("exit")
+                exit_count = 0
+                return "<script>alert('You have not entered yet!'); window.location.href = '/dashboard';</script>"
+            
             exit = EntryLogs(session['username'], False)
             db.session.add(exit)
             db.session.commit()
             slot = ParkingSlots.query.filter_by(username=session['username']).first()
             slot.change_status(True)
-            return "<script>alert('Exit logged!'); window.location.href = '/dashboard';</script>"
+            
+            amount = calculate_balance()
+            if amount:
+                gen_token("exit")
+                exit_count = 0
+                return f"<script>alert('Amount: {amount[0]} detected for {amount[1]} seconds!'); window.location.href = '/dashboard';</script>"
+            gen_token("exit")
+            exit_count = 0
+            return "<script>alert('You have not entered yet!'); window.location.href = '/dashboard';</script>"
 
     return render_template('login.html', error='You are not logged in')
+
+# TODO: Add QR code scanner
+# @app.route('/scan_qr')
+# def scan_qr():
+#     return render_template('scan_qr.html')
+
+@app.route('/qr/<string:type>')
+def qr(type):
+    global entry_count
+    global exit_count
+    if type == "entry":
+        if entry_count < 2:
+            entry_count += 1
+        else:
+            gen_token("entry")
+            entry_count = 0
+        print(f"entry token: {current_entry_token}")
+        return render_template('qr.html', type=type, title=type, token=current_entry_token)
+    elif type == "exit":
+        if exit_count < 2:
+            exit_count += 1
+        else:
+            gen_token("exit")
+            exit_count = 0
+        print(f"exit token: {current_exit_token}")
+        return render_template('qr.html', type=type, title=type, token=current_exit_token)
+    return "Invalid type!"
+
 
 # TODO: Add amount logs
 class AmountLogs(db.Model):
@@ -191,9 +290,7 @@ def detect():
     if session.get('username'):
 
         entry("exit")
-        amount = calculate_balance()
-        if amount:
-            return f"<script>alert('Amount: {amount[0]} detected for {amount[1]} seconds!'); window.location.href = '/dashboard';</script>"
+        
     
     return render_template('login.html', error='You are not logged in')
 
@@ -302,7 +399,8 @@ def reset():
     # if session['is_admin']:
         db.drop_all()
         db.create_all()
-        return "<script>alert('Database reset!'); window.location.href = '/';</script>"
+        return "<script>alert('Database reset!'); window.location.href = '/';</script>" and slot_init()
+
     # return 'You are not an admin!'
 
 with app.app_context():
@@ -388,5 +486,7 @@ if __name__ == '__main__':
         # if slot is empty, initialize slots
         if not ParkingSlots.query.first():
             slot_init()
+        gen_token("entry")
+        gen_token("exit")
 
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)

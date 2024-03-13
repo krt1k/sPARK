@@ -1,0 +1,40 @@
+<!-- simple qr code -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR</title>
+    
+    <style>
+        h1 {
+            text-align: center;
+        }
+        img {
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+
+    <!-- script to auto refresh the img with ajax every 3 secs -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            setInterval(function() {
+                $('img').attr('src', 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=svg&data=http://192.168.29.15:5000/transact/{{ title }}/{{ token }}');
+            }, 4000);
+        });
+
+    </script>
+
+    <meta http-equiv="refresh" content="3">
+
+</head>
+
+
+<body>
+    <h1><b>{{ title }}</b></h1><br>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=svg&data=http://192.168.29.15:5000/transact/{{ title }}/{{ token }}" alt="qr code">
+</body>
+</html>
