@@ -21,7 +21,7 @@ def verify_password(username, password):
 
 app = Flask(__name__)
 
-dev = False and True
+dev = False or True
 
 # db
 # bcrypt = Bcrypt(app)
@@ -123,7 +123,7 @@ def slot_init():
             db.session.close()
     return slot_finder()
 
-@app.route('/slot_finder')
+# @app.route('/slot_finder')
 def slot_finder():
     slots = ParkingSlots.query.where(ParkingSlots.status == True).order_by(ParkingSlots.id.asc()).all()
 
@@ -162,6 +162,9 @@ def entry(type, token):
     
     global entry_count
     global exit_count
+
+    if not session.get('username'):
+        return "<script>alert('You are not logged in! Please login and retry.'); window.location.href = '/login';</script>"
 
     if session['username']:
         # trans = EntryLogs.query.filter_by(username=session['username']).first()
@@ -328,12 +331,19 @@ def list_users():
     users = list(map(lambda user: {'username': user.username, 'email': user.email, 'is_admin': user.is_admin}, users))
     return users
 
-@app.route('/list_balances')
-@auth.login_required
+# @app.route('/list_balances')
+# @auth.login_required
 def list_balances():
     balances = Balance.query.all()
+
+    # filer out admin
+    admin_list = User.query.where(User.is_admin == True).all()
+    admin_list = list(map(lambda admin: admin.username, admin_list))
+
     # serialize the data
-    balances = list(map(lambda balance: {'username': balance.username, 'balance': balance.balance}, balances))
+    balances = list(filter(lambda balance: balance.username not in admin_list, balances))
+    # balances = list(map(lambda balance: {'username': balance.username, 'balance': balance.balance}, balances))
+
     return balances
 
 # @event.listens_for(User, 'after_insert')
@@ -386,7 +396,7 @@ def check_balance():
         if request.method == 'POST':
             username = request.form['username']
             balance = Balance.query.filter_by(username=username).first()
-            return render_template('check_balance.html', balance=balance.balance, balances=balances_list)
+            return render_template('check_balance.html', username=username, balance=balance.balance, balances=balances_list)
         return render_template('check_balance.html', balances=balances_list)
     return "You are not an admin!"
 
