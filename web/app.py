@@ -2,9 +2,12 @@ import datetime
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 import bcrypt
+from waitress import serve
 
 
 app = Flask(__name__)
+
+dev = True
 
 # db
 # bcrypt = Bcrypt(app)
@@ -389,4 +392,7 @@ if __name__ == '__main__':
         if not ParkingSlots.query.first():
             slot_init()
 
-    app.run(debug=True)
+    if dev:
+        app.run(debug=True, host="0.0.0.0", port=5000)
+    else:
+        serve(app, host="0.0.0.0", port=5000, threads=256)
