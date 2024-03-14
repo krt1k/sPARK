@@ -1,6 +1,6 @@
-floors = ['A', 'B', 'C']
-count = [i for i in range(1, 11)]
+import datetime
+import time
 
-for floor in floors:
-    for i in count:
-        print(f"{floor}{i}")
+# print(datetime.datetime.now(datetime.UTC))
+print(datetime.datetime.now())
+print(time.time())

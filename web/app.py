@@ -61,13 +61,13 @@ class Balance(db.Model):
 class EntryLogs(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    time = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    time = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now)
     # entry or exit
     transact = db.Column(db.Boolean, nullable=False, default=True)
     
     def __init__(self, username, transact):
         self.username = username
-        self.time = datetime.datetime.utcnow()
+        self.time = datetime.datetime.now()
         self.transact = transact
 
 
@@ -256,7 +256,8 @@ class AmountLogs(db.Model):
 
     def __init__(self, username, amount, remaining_balance):
         self.username = username
-        self.time = datetime.datetime.utcnow()
+        # self.time = datetime.datetime.utcnow()
+        self.time = datetime.now(datetime.UTC)
         self.amount = amount
         self.remaining_balance = remaining_balance
     
