@@ -6,6 +6,17 @@ from flask_sqlalchemy import SQLAlchemy
 import bcrypt
 from waitress import serve
 
+# basic http auth
+from flask_httpauth import HTTPBasicAuth
+auth = HTTPBasicAuth()
+http_user = "krth1k"
+pw = "Broject@1234"
+
+@auth.verify_password
+def verify_password(username, password):
+    if username == http_user and password == pw:
+        return True
+    return False
 
 
 app = Flask(__name__)
@@ -122,6 +133,7 @@ def slot_finder():
     return "No slots available"
 
 @app.route('/list_slot')
+@auth.login_required
 def list_slots():
     slots = ParkingSlots.query.all()
     slots = list(map(lambda slot: {'slot_number': slot.slot_number, 'status': slot.status, 'username': slot.username}, slots))
@@ -224,16 +236,17 @@ def entry(type, token):
 #     return render_template('scan_qr.html')
 
 @app.route('/qr/<string:type>')
+@auth.login_required
 def qr(type):
     global entry_count
     global exit_count
     if type == "entry":
-        if entry_count < 2:
+        if entry_count < 1:
             entry_count += 1
         else:
             gen_token("entry")
             entry_count = 0
-        print(f"entry token: {current_entry_token}")
+        print(f"entry token: {current_entry_token}, count: {entry_count}")
         return render_template('qr.html', type=type, title=type, token=current_entry_token)
     elif type == "exit":
         if exit_count < 2:
@@ -241,7 +254,7 @@ def qr(type):
         else:
             gen_token("exit")
             exit_count = 0
-        print(f"exit token: {current_exit_token}")
+        print(f"exit token: {current_exit_token}, count: {exit_count}")
         return render_template('qr.html', type=type, title=type, token=current_exit_token)
     return "Invalid type!"
 
@@ -299,6 +312,7 @@ def detect():
     return render_template('login.html', error='You are not logged in')
 
 @app.route('/list_entry_logs')
+@auth.login_required
 def list_entry_logs():
     logs = EntryLogs.query.all()
     # serialize the data
@@ -306,6 +320,7 @@ def list_entry_logs():
     return logs
 
 @app.route('/list_users')
+@auth.login_required
 def list_users(): 
     # users = User.query.all()
     users = User.query.where(User.is_admin == False).all()
@@ -314,6 +329,7 @@ def list_users():
     return users
 
 @app.route('/list_balances')
+@auth.login_required
 def list_balances():
     balances = Balance.query.all()
     # serialize the data
@@ -329,6 +345,7 @@ def list_balances():
 
 
 @app.route('/create_admin', methods=['GET', 'POST'])
+@auth.login_required
 def create_admin():
     if request.method == 'POST':
         username = request.form['username']
@@ -399,6 +416,7 @@ def add_balance():
 
 
 @app.route('/reset')
+@auth.login_required
 def reset():
     # if session['is_admin']:
         db.drop_all()
