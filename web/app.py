@@ -21,7 +21,7 @@ def verify_password(username, password):
 
 app = Flask(__name__)
 
-dev = True
+dev = False and True
 
 # db
 # bcrypt = Bcrypt(app)
@@ -228,7 +228,7 @@ def entry(type, token):
             exit_count = 0
             return "<script>alert('You have not entered yet!'); window.location.href = '/dashboard';</script>"
 
-    return render_template('login.html', error='You are not logged in')
+    return "<script>alert('You are not logged in! Please login and retry.'); window.location.href = '/login';</script>"
 
 # TODO: Add QR code scanner
 # @app.route('/scan_qr')
@@ -421,7 +421,7 @@ def reset():
     # if session['is_admin']:
         db.drop_all()
         db.create_all()
-        return "<script>alert('Database reset!'); window.location.href = '/';</script>" and slot_init()
+        return "<script>alert('Database reset!'); window.location.href = '/logout';</script>" and slot_init()
 
     # return 'You are not an admin!'
 
@@ -468,9 +468,9 @@ def login():
                 return redirect(url_for('dashboard'))
             else:
                 # notify user of invalid password
-                return render_template('login.html', error='Invalid username/password')
+                return "<script>alert('Invalid password!'); window.location.href = '/login';</script>"
         else:
-            return redirect(url_for('register') )
+            return "<script>alert('User not found! Please register before login.'); window.location.href = '/register';</script>"
     
     return render_template('login.html')
 
@@ -488,7 +488,7 @@ def register():
 
         print(username, email, password)
 
-        return redirect(url_for('login'))
+        return "<script>alert('User created!'); window.location.href = '/login';</script>"
     
     return render_template('register.html')
 

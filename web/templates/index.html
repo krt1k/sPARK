@@ -3,7 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flask App</title>
+    <title>sPark</title>
+
+    <style>
+        h2 {
+            text-align: center;
+        }
+        .container {
+            text-align: center;
+            margin-top: 50px;
+        }
+
+    </style>
+
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
@@ -11,8 +23,11 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
 </head>
 <body>
-    <h1>sPark</h1>
-    <a href="{{ url_for('login') }}" class="btn btn-dark" >Login</a>
-    <a href="{{ url_for('register') }}" class="btn btn-dark" >Register</a>
+    <div class="container">
+        <h2>Welcome to sPark</h2>
+        <!-- <p>Click the button below to login or register</p> -->
+        <a href="{{ url_for('login') }}" class="btn btn-dark" >Login</a>
+        <a href="{{ url_for('register') }}" class="btn btn-dark" >Register</a>
+    </div>
 </body>
 </html>
