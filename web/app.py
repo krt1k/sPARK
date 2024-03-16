@@ -247,16 +247,18 @@ def qr(type):
         if entry_count < 1:
             entry_count += 1
         else:
-            gen_token("entry")
-            entry_count = 0
+            # gen_token("entry")
+            # entry_count = 0
+            pass
         print(f"entry token: {current_entry_token}, count: {entry_count}")
         return render_template('qr.html', type=type, title=type, token=current_entry_token)
     elif type == "exit":
         if exit_count < 2:
             exit_count += 1
         else:
-            gen_token("exit")
-            exit_count = 0
+            # gen_token("exit")
+            # exit_count = 0
+            pass
         print(f"exit token: {current_exit_token}, count: {exit_count}")
         return render_template('qr.html', type=type, title=type, token=current_exit_token)
     return "Invalid type!"
@@ -266,14 +268,14 @@ def qr(type):
 class AmountLogs(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    time = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow())
+    time = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now())
     amount = db.Column(db.Integer, nullable=False)
     remaining_balance = db.Column(db.Integer, nullable=False)
 
     def __init__(self, username, amount, remaining_balance):
         self.username = username
-        # self.time = datetime.datetime.utcnow()
-        self.time = datetime.now(datetime.UTC)
+        self.time = datetime.datetime.now()
+        # self.time = datetime.now(datetime.UTC)
         self.amount = amount
         self.remaining_balance = remaining_balance
     
@@ -518,6 +520,8 @@ if __name__ == '__main__':
         # if slot is empty, initialize slots
         if not ParkingSlots.query.first():
             slot_init()
+        gen_token("entry")
+        gen_token("exit")
 
     if dev:
         app.run(debug=True, host="0.0.0.0", port=5000)

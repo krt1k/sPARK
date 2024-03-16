@@ -23,7 +23,7 @@
     <script>
         $(document).ready(function() {
             setInterval(function() {
-                $('img').attr('src', 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&format=svg&data=http://192.168.29.175:5000/transact/{{ title }}/{{ token }}');
+                $('img').attr('src', 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&format=svg&data=http://192.168.3.88:5000/transact/{{ title }}/{{ token }}');
             }, 4000);
         });
 
@@ -36,6 +36,6 @@
 
 <body>
     <h1><b>{{ title }}</b></h1><br>
-    <img src="https://api.qrserver.com/v1/create-qr-code/?size=500x500&format=svg&data=http://192.168.29.175:5000/transact/{{ title }}/{{ token }}" alt="qr code">
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=500x500&format=svg&data=http://192.168.3.88:5000/transact/{{ title }}/{{ token }}" alt="qr code">
 </body>
 </html>
